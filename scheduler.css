@@ -1,0 +1,238 @@
+
+body {
+    font-family: sans-serif;
+    font-size: 14px;
+}
+
+div, span {
+    margin: 0;
+    padding: 0;
+}
+
+.role {
+    display: inline-block;
+    vertical-align: top;
+    background-color: white;
+    border: 2px solid black;
+    border-radius: 16px;
+    margin: 8px;
+    resize: horizontal;
+}
+
+.role:open {
+    width: 300px;
+}
+
+.role.junior:open {
+    width: 200px;
+}
+
+.role .edit-role {
+    display: none;
+    float: right;
+    font-weight: bold;
+}
+
+.role:open .edit-role {
+    display: block;
+}
+
+summary, select, input.total-value {
+    cursor: pointer;
+}
+
+summary > * {
+    display: inline-block;
+}
+
+.role summary h4 {
+    display: inline;
+}
+
+.lp3 {
+    background-color: color-mix(in srgb, darkorange 40%, white);
+}
+.lp4 {
+    background-color: color-mix(in srgb, olive 35%, white);
+}
+.lp1 {
+    background-color: color-mix(in srgb, gold 50%, white);
+}
+.lp2 {
+    background-color: color-mix(in srgb, yellowgreen 50%, white);
+}
+.other {
+    background-color: color-mix(in srgb, slategray 40%, white);
+}
+.senior {
+    background-color: color-mix(in srgb, royalblue 35%, white);
+}
+.junior {
+    background-color: color-mix(in srgb, cadetblue, white);
+}
+
+.role > * {
+    padding: 4px 8px;
+}
+
+.role > *:last-child {
+    border-radius: 0 0 16px 16px;
+}
+
+.role h4 {
+    margin: 0;
+    text-align: center;
+}
+
+.add-task {
+    width: 2em;
+    float: right;
+    text-align: center;
+    appearance: none;
+}
+
+.tasklist {
+    min-height: 24px;
+}
+
+
+.task, .total-value, .placeholder, .add-task {
+    display: inline-block;
+    border-radius: 8px;
+    text-wrap: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+    position: relative;
+    z-index: 1;
+}
+
+.task, .placeholder, .add-task {
+    border: 1px solid color-mix(in srgb, black, transparent);
+    font-size: x-small;
+    margin: 2px;
+}
+
+.task-info, .placeholder, .total-value {
+    padding: 4px 0;
+}
+
+.task-info {
+    display: inline-block;
+    width: 100%;
+}
+
+.task-value {
+    writing-mode: sideways-lr;
+    padding: 0 4px;
+    font-size: xx-small;
+    vertical-align: middle;
+
+}
+
+.total-value {
+    padding: 0;
+}
+
+.placeholder, .total-value {
+    text-align: center;
+}
+
+.total-value {
+    border: none;
+    border-radius: 8px;
+}
+
+.total-value, .used-value-text, .used-value-slider {
+    font-size: small;
+    height: 16px;
+}
+
+.total-value, .used-value-text {
+    width: 50%;
+    text-align: center;
+}
+
+.used-value-text {
+    margin-left: 1em;
+}
+
+.used-value-slider {
+    background-color: color-mix(in srgb, red, transparent);
+    border-color: transparent;
+    border-radius: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.total-value, .task, .add-task {
+    background-color: color-mix(in srgb, white 70%, transparent);
+}
+
+.task {
+    cursor: grab;
+    resize: horizontal;
+}
+
+.role-values {
+    display: grid;
+    grid-template: 1fr / 1fr;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.role-values > * {
+    grid-column: 1 / 1;
+    grid-row: 1 / 1;
+    text-wrap: nowrap;
+}
+
+.task:active {
+    cursor: grabbing;
+}
+
+.placeholder {
+    background-color: gainsboro;
+    color: grey;
+    border: 1px solid grey;
+    border-radius: 8px;
+}
+
+.dragged {
+    opacity: 0.2;
+}
+
+
+body {
+    margin: 0;
+}
+main {
+    padding: 16px;
+    margin-top: 24px;
+}
+header {
+    width: 100%;
+    position: fixed;
+    padding: 8px 0;
+    top: 0;
+    background-color: lightgrey;
+    z-index: 10;
+}
+header > div {
+    padding: 0 16px;
+}
+#export-data {
+    float: right;
+}
+#import-data {
+    float: left;
+}
+#import-data input {
+    display: none;
+}
+#import-data label {
+    display: none;
+}
+
+.edit-dialog .buttons :last-child {
+    float: right;
+}
