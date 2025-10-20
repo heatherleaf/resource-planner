@@ -13,15 +13,21 @@
 <header>
   <div>
     <div id="import-data"><button>Import data from JSON file</button><input type="file" accept=".json"/></div>
+    <div id="select-period"><select name="select-period"></select></div>
     <div id="export-data"><button>Export data to JSON file</button></div>
   </div>
 </header>
 
 <main>
-  <h1>Planning</h1>
+  <h1>Planning <span id="current-period"></span></h1>
 
   <h2>People (100% ≈ 1700/1725/1750h, 20% ≈ 340/345/350h)</h2>
-  <button class="add-role" data-type="person">Add new person</button>
+  <select class="add-role" data-type="person">
+    <option selected disabled>Add person</option>
+    <option value="+">Create new person</option>
+    <optgroup label="Senior" data-group="senior"></optgroup>
+    <optgroup label="Junior" data-group="junior"></optgroup>
+  </select>
 
   <details open>
     <summary><h3>Seniors</h3></summary>
@@ -34,7 +40,15 @@
   </details>
 
   <h2>Courses/projects (budget = 250 + 10n, where n is #students)</h2>
-  <button class="add-role" data-type="course">Add new course or project</button>
+  <select class="add-role" data-type="course">
+    <option selected disabled>Add course or project</option>
+    <option value="+">Create new course/project</option>
+    <optgroup label="LP3" data-group="lp3"></optgroup>
+    <optgroup label="LP4" data-group="lp4"></optgroup>
+    <optgroup label="LP1" data-group="lp1"></optgroup>
+    <optgroup label="LP2" data-group="lp2"></optgroup>
+    <optgroup label="Other tasks" data-group="other"></optgroup>
+  </select>
 
   <details open>
     <summary><h3>LP3, Jan-Mar</h3></summary>
@@ -120,9 +134,9 @@
         <input name="nickname" type="text" placeholder="Nickname (optional)"/>
       </td></tr>
       <tr><td>
-        <label for="value">Assigned hours</label>
+        <label for="target">Assigned hours</label>
       </td><td>
-        <input required name="value" type="number" min="0" value="0"/>
+        <input required name="target" type="number" min="0" value="0"/>
       </td></tr>
       <tr><td>
         <label for="group">Category</label>
@@ -163,9 +177,9 @@
         <input name="nickname" type="text" placeholder="Shorter title (optional)"/>
       </td></tr>
       <tr><td>
-        <label for="value">Assigned hours</label>
+        <label for="target">Assigned hours</label>
       </td><td>
-        <input required name="value" type="number" min="0" value="0"/>
+        <input required name="target" type="number" min="0" value="0"/>
       </td></tr>
       <tr><td>
         <label for="group">Study period</label>

@@ -4,63 +4,142 @@ window.addEventListener("DOMContentLoaded", initialise);
 function initialise() {
     setupImportExport();
     setupAddRole();
+    setupPeriods();
     populateRolesAndTasks();
 }
 
 
-function updateRoles(...roleElems) {
-    if (roleElems.length === 0)
-        roleElems = document.querySelectorAll(".role");
-    for (const roleElem of roleElems) {
-        const roleId = roleElem.dataset.role;
-        const role = dbGetRole(roleId);
-        const totalElem = roleElem.querySelector(".total-value");
-        const totalValue = totalElem.value = role.value;
-        const usedValueElem = roleElem.querySelector(".used-value-text");
-        const usedSliderElem = roleElem.querySelector(".used-value-slider");
-        let usedValue = 0;
-        for (const taskId of dbTaskIds()) {
-            const task = dbGetTask(taskId);
-            if (task?.[role.type] === roleId) usedValue += task.value;
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Handling periods
+
+function setupPeriods() {
+    const periods = {};
+    for (const roleId of dbRoleIds()) {
+        for (p in dbGetRole(roleId).target) periods[p] = true;
+    }
+    const sortedPeriods = Object.keys(periods).toSorted((a,b) => -a.localeCompare(b));
+    if (sortedPeriods.length === 0) {
+        sortedPeriods.push(SETTINGS.unknownPeriodName);
+    }
+    const periodSelect = document.querySelector("#select-period select");
+    for (const period of sortedPeriods) {
+        periodSelect.appendChild(newElem("option", period, {value: period}));
+    }
+    periodSelect.appendChild(newElem("option", "────────────────────", {value: "%", disabled: true}));
+    periodSelect.appendChild(newElem("option", "Rename this period", {value: "/"}));
+    periodSelect.appendChild(newElem("option", "Add new empty period", {value: "+"}));
+    periodSelect.appendChild(newElem("option", "Clone this period", {value: "="}));
+    periodSelect.appendChild(newElem("option", "Delete this period", {value: "-"}));
+    periodSelect.selectedIndex = 0;
+    document.querySelector("#current-period").textContent = periodSelect.value;
+    periodSelect.addEventListener("change", (event) => {
+        const currentPeriod = getCurrentPeriod();
+        let newPeriod = periodSelect.value;
+        if (periodSelect.value === "/") {
+            const newName = prompt("What is the new name of the period?");
+            if (newName && sortedPeriods.includes(newName)) {
+                alert(`The period ${newName} already exists.`);
+            } else if (newName) {
+                newPeriod = newName;
+                renamePeriod(currentPeriod, newPeriod);
+                const option = periodSelect.querySelector(`option[value="${currentPeriod}"]`);
+                option.value = option.textContent = newPeriod;
+            }
+        } else if (periodSelect.value === "+" || periodSelect.value === "=") {
+            newPeriod = prompt("What is the name of the new period?");
+            if (newPeriod) {
+                periodSelect.insertBefore(newElem("option", newPeriod, {value: newPeriod}), periodSelect.childNodes[0]);
+                if (periodSelect.value === "=") {
+                    clonePeriod(currentPeriod, newPeriod);
+                }
+            }
+        } else if (periodSelect.value === "-") {
+            newPeriod = currentPeriod;
+            if (prompt(`Are you sure you want to delete ${currentPeriod}?\nIf so, type "YES":`) === "YES") {
+                deletePeriod(currentPeriod);
+                periodSelect.querySelector(`option[value="${currentPeriod}"]`).remove();
+                newPeriod = periodSelect.childNodes[0].value;
+                if (newPeriod === "%") {
+                    newPeriod = SETTINGS.unknownPeriodName;
+                    periodSelect.insertBefore(newElem("option", newPeriod, {value: newPeriod}), periodSelect.childNodes[0]);
+                }
+            }
         }
-        const usedPercent = totalValue <= 0 ? 0 : Math.round(100 * usedValue / totalValue);
-        usedSliderElem.style.width = (usedPercent / 2) + "%";
-        usedValueElem.textContent = displaySign(Math.round(usedValue - totalValue));
+        periodSelect.querySelector(`option[value="${newPeriod}"]`).selected = true;
+        document.querySelector("#current-period").textContent = periodSelect.value;
+        populateRolesAndTasks();
+    });
+}
+
+
+function getCurrentPeriod() {
+    return document.querySelector("#current-period").textContent;
+}
+
+
+function renamePeriod(oldPeriod, newPeriod) {
+    for (const roleId of dbRoleIds()) {
+        const role = dbGetRole(roleId);
+        if (oldPeriod in role.target) {
+            role.target[newPeriod] = role.target[oldPeriod];
+            delete role.target[oldPeriod];
+            dbUpdateRole(roleId, role);
+        }
+    }
+    for (const taskId of dbTaskIds()) {
+        const task = dbGetTask(taskId);
+        if (task.period === oldPeriod) {
+            task.period = newPeriod;
+            dbUpdateTask(taskId);
+        }
     }
 }
 
 
-function updateTask(taskId) {
-    const task = dbGetTask(taskId);
-    if (!task) return;
-    const taskElems = document.querySelectorAll(`.task[data-task-id="${taskId}"]`);
-    for (const taskElem of taskElems) {
-        const roleId = taskElem.closest(".role").dataset.role;
-        const taskRoles = Object.keys(task).flatMap((type) => {
-            const role = dbGetRole(task[type]);
-            return (role?.name && task[type] !== roleId) ? role : [];
-        });
-        if (taskRoles.length === 0) console.warn(`Task ${taskId} in ${roleId}: empty description`, task);
-        taskElem.querySelector(".task-value").textContent = task.value;
-        taskElem.querySelector(".task-info").textContent = taskRoles.map((r) => r.nickname || r.name).join(" + ");
-        taskElem.title = (
-            task.value + ": " + taskRoles.map((r) => r.name).join(" + ") +
-            (task.comments ? "\n\n" + task.comments : "")
-        );
-        const width = valueToWidth(task.value);
-        taskElem.style.width = width + "px";
+function deletePeriod(period) {
+    for (const roleId of dbRoleIds()) {
+        const role = dbGetRole(roleId);
+        if (period in role.target) {
+            delete role.target[period];
+            if (Object.keys(role.target).length > 0) {
+                dbUpdateRole(roleId, role);
+            } else {
+                dbDeleteRole(roleId);
+            }
+        }
+    }
+    for (const taskId of dbTaskIds()) {
+        const task = dbGetTask(taskId);
+        if (task.period === period) {
+            dbDeleteTask(taskId);
+        }
     }
 }
 
 
-function deleteTask(taskId) {
-    const roleElems = [];
-    for (const taskElem of document.querySelectorAll(`.task[data-task-id="${taskId}"]`)) {
-        roleElems.push(taskElem.closest(".role"));
-        taskElem.remove();
+function clonePeriod(fromPeriod, toPeriod) {
+    for (const roleId of dbRoleIds()) {
+        const role = dbGetRole(roleId);
+        if (fromPeriod in role.target) {
+            role.target[toPeriod] = role.target[fromPeriod];
+        } else if (toPeriod in role.target) {
+            delete role.target[toPeriod];
+        } else {
+            continue;
+        }
+        dbUpdateRole(roleId, role);
     }
-    updateRoles(...roleElems);
-    dbDeleteTask(taskId);
+    for (const taskId of dbTaskIds()) {
+        if (dbGetTask(taskId).period === toPeriod) dbDeleteTask(taskId);
+    }
+    for (const taskId of dbTaskIds()) {
+        const task = dbGetTask(taskId);
+        if (task.period === fromPeriod) {
+            const newTaskId = dbCreateTask(task);
+            task.period = toPeriod;
+            dbUpdateTask(newTaskId, task);
+        }
+    }
 }
 
 
@@ -94,8 +173,7 @@ function importData() {
     fileReader.onload = (e) => {
         const content = e.target.result;
         dbReplaceAllData(JSON.parse(content));
-        populateRolesAndTasks();
-        fileInput.value = null;
+        window.location.reload();
     };
     fileReader.readAsText(fileInput.files[0]);
 }
@@ -121,17 +199,26 @@ function cleanTasks() {
 // Initialise the webpage
 
 function populateRolesAndTasks() {
-    for (const containerElem of document.querySelectorAll(".container")) containerElem.replaceChildren();
+    for (const containerElem of document.querySelectorAll(".container")) {
+        containerElem.replaceChildren();
+    }
     const sortedIds = dbRoleIds();
-    for (const roleId of sortedIds) populateRole(roleId);
+    for (const roleId of sortedIds) {
+        populateRole(roleId);
+    }
     populateAddTaskDropdown(sortedIds);
-    for (const taskId of dbTaskIds()) populateTask(taskId, true);
+    for (const taskId of dbTaskIds()) {
+        populateTask(taskId, true);
+    }
     updateRoles();
 }
 
 
 function populateRole(roleId) {
     const role = dbGetRole(roleId);
+    const currentPeriod = getCurrentPeriod();
+    if (role.target[currentPeriod] == null) return;
+
     const template = document.querySelector(`#${role.type}-template`);
     const roleElem = template.content.cloneNode(true).querySelector(".role");
     roleElem.dataset.role = roleId;
@@ -152,10 +239,10 @@ function populateRole(roleId) {
     // Drag and drop
     setupDraggableRole(roleElem, role.type);
 
-    // Changing the total goal value of a role
+    // Changing the total target value of a role
     const totalElem = roleElem.querySelector(".total-value");
     totalElem.addEventListener("change", (event) => {
-        role.value = totalElem.value = parseInt(totalElem.value) || 0;
+        role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
         dbUpdateRole(roleId, role);
         updateRoles(roleElem);
         totalElem.blur();
@@ -179,14 +266,17 @@ function populateRole(roleId) {
 function populateAddTaskDropdown(sortedIds) {
     // TODO: This only works if there are two types.
     // If there are more, then the new tasks will miss to include a role.
+    const currentPeriod = getCurrentPeriod();
     for (const addElem of document.querySelectorAll(`select.add-task`)) {
         addElem.replaceChildren();
         addElem.appendChild(newElem("option", "+", {disabled: true, selected: true}));
         const group = addElem.dataset.group;
         for (const roleId of sortedIds) {
             const role = dbGetRole(roleId);
-            if (group === role.group || group === role.type) {
-                addElem.appendChild(newElem("option", role.name, {value: role.type + ":" + roleId}));
+            if (currentPeriod in role.target) {
+                if (group === role.group || group === role.type) {
+                    addElem.appendChild(newElem("option", role.name, {value: role.type + ":" + roleId}));
+                }
             }
         }
 
@@ -195,7 +285,14 @@ function populateAddTaskDropdown(sortedIds) {
         const newValue = SETTINGS.newTaskValue[other.group] || SETTINGS.newTaskValue[other.type];
         addElem.addEventListener("change", (event) => {
             const [roleType, roleId] = addElem.value.split(":");
-            const task = {[roleType]: roleId, [other.type]: otherId, value: newValue};
+            const task = {
+                roles: {
+                    [roleType]: roleId,
+                    [other.type]: otherId,
+                },
+                period: getCurrentPeriod(),
+                value: newValue,
+            };
             const taskId = dbCreateTask(task);
             populateTask(taskId);
             addElem.selectedIndex = 0;
@@ -206,11 +303,13 @@ function populateAddTaskDropdown(sortedIds) {
 
 
 function populateTask(taskId, dontUpdateRoles = false) {
+    const currentPeriod = getCurrentPeriod();
     const task = dbGetTask(taskId);
+    if (task.period !== currentPeriod) return;
     const roleElems = {};
     const taskListSelectors = [];
-    for (const type in task) {
-        const roleElem = document.querySelector(`.role[data-role="${task[type]}"]`);
+    for (const type in task.roles) {
+        const roleElem = document.querySelector(`.role[data-role="${task.roles[type]}"]`);
         if (!roleElem) continue;
         roleElems[type] = roleElem;
         const group = dbGetRole(roleElem.dataset.role).group;
@@ -266,13 +365,25 @@ function populateTask(taskId, dontUpdateRoles = false) {
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Editing or removing a task
+// Handling tasks
+
+function deleteTask(taskId) {
+    const roleElems = [];
+    for (const taskElem of document.querySelectorAll(`.task[data-task-id="${taskId}"]`)) {
+        roleElems.push(taskElem.closest(".role"));
+        taskElem.remove();
+    }
+    updateRoles(...roleElems);
+    dbDeleteTask(taskId);
+}
+
 
 function editTask(event) {
     event.preventDefault();
     const taskElem = event.target.closest(".task");
     showTaskEditor(taskElem);
 }
+
 
 function showTaskEditor(taskElem) {
     const taskId = taskElem.dataset.taskId;
@@ -290,7 +401,7 @@ function showTaskEditor(taskElem) {
         selectElem.appendChild(
             newElem("option", role.name, {value: roleId})
         );
-        if (task[role.type] === roleId) selectElem.lastChild.selected = true;
+        if (task.roles[role.type] === roleId) selectElem.lastChild.selected = true;
     }
     form.elements.value.value = task.value || 0;
     form.elements.comments.value = task.comments || "";
@@ -300,9 +411,12 @@ function showTaskEditor(taskElem) {
             const updated = {
                 value: parseFloat(form.elements.value.value),
                 comments: form.elements.comments.value,
+                roles: {},
             };
-            form.querySelectorAll("select").forEach((elem) => updated[elem.name] = elem.value);
-            if (Object.keys(updated).some((k) => updated[k] !== task[k])) {
+            for (const type in task.roles) {
+                updated.roles[type] = form.elements[type].value;
+            }
+            if (JSON.stringify(updated) !== JSON.stringify(task)) {
                 dbUpdateTask(taskId, updated);
                 populateRolesAndTasks();
             }
@@ -317,19 +431,78 @@ function showTaskEditor(taskElem) {
 }
 
 
+function updateTask(taskId) {
+    const task = dbGetTask(taskId);
+    if (!task) return;
+    const taskElems = document.querySelectorAll(`.task[data-task-id="${taskId}"]`);
+    for (const taskElem of taskElems) {
+        const roleId = taskElem.closest(".role").dataset.role;
+        const taskRoles = Object.keys(task.roles).flatMap((type) =>
+            (task.roles[type] !== roleId) ? dbGetRole(task.roles[type]) : []
+        );
+        if (taskRoles.length === 0) console.warn(`Task ${taskId} in ${roleId}: empty description`, task);
+        taskElem.querySelector(".task-value").textContent = task.value;
+        taskElem.querySelector(".task-info").textContent = taskRoles.map((r) => r.nickname || r.name).join(" + ");
+        taskElem.title = (
+            task.value + ": " + taskRoles.map((r) => r.name).join(" + ") +
+            (task.comments ? "\n\n" + task.comments : "")
+        );
+        const width = valueToWidth(task.value);
+        taskElem.style.width = width + "px";
+    }
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Adding, editing and removing a role
+// Handling roles
 
 function setupAddRole() {
-    for (const elem of document.querySelectorAll(".add-role")) {
-        elem.addEventListener("click", addNewRole);
+    for (const elem of document.querySelectorAll("select.add-role")) {
+        const type = elem.dataset.type;
+        for (const roleId of dbRoleIds()) {
+            const role = dbGetRole(roleId);
+            if (role.type === type) {
+                let optgroup = elem.querySelector(`optgroup[data-group="${role.group}"]`);
+                if (!optgroup) optgroup = elem;
+                optgroup.appendChild(newElem("option", role.name, {value: roleId}));
+            }
+        }
+        elem.selectedIndex = 0;
+        elem.addEventListener("focus", filterAddSelect);
+        elem.addEventListener("change", addNewRole);
+    }
+}
+
+
+function filterAddSelect(event) {
+    const selectElem = event.target;
+    for (const optElem of selectElem.querySelectorAll("option")) {
+        const roleId = optElem.value;
+        optElem.style.display = document.querySelector(`.role[data-role="${roleId}"]`) ? "none" : "inherit";
     }
 }
 
 
 function addNewRole(event) {
-    const roleId = "role-" + Math.floor((Math.random() + 1) * 1e10).toString(36);
-    showRoleEditor(roleId, {type: event.target.dataset.type});
+    const selectElem = event.target;
+    if (selectElem.value === "+") {
+        const roleId = "role-" + Math.floor((Math.random() + 1) * 1e10).toString(36);
+        showRoleEditor(roleId, {type: selectElem.dataset.type});
+    } else {
+        const roleId = selectElem.value;
+        const role = dbGetRole(roleId);
+        const currentPeriod = getCurrentPeriod();
+        if (role.target[currentPeriod] != null) {
+            console.error(`New role ${roleId} already contains the current period.`);
+            return;
+        }
+        const newTarget = SETTINGS.newRoleValue[role.group] || SETTINGS.newRoleValue[role.type];
+        role.target[currentPeriod] = newTarget;
+        dbUpdateRole(roleId, role);
+        populateRolesAndTasks();
+    }
+    selectElem.selectedIndex = 0;
+    selectElem.blur();
 }
 
 
@@ -343,25 +516,27 @@ function editRole(event) {
 function showRoleEditor(roleId, role) {
     const roleEditor = document.querySelector(`#edit-dialog-${role.type}`);
     roleEditor.querySelector(".edit-role-id").textContent = roleId;
+    const period = getCurrentPeriod();
 
     const form = roleEditor.querySelector("form");
     form.elements.name.value = role.name || "";
     form.elements.nickname.value = role.nickname || "";
-    form.elements.value.value = role.value || 0;
     form.elements.group.value = role.group || "";
     form.elements.comments.value = role.comments || "";
+    form.elements.target.value = role.target[period] || 0;
 
     function handleEdits() {
         if (roleEditor.returnValue === "ok") {
+            const newTarget = parseFloat(form.elements.target.value);
             const updated = {
                 type: role.type,
                 name: form.elements.name.value,
                 nickname: form.elements.nickname.value,
                 group: form.elements.group.value,
-                value: parseFloat(form.elements.value.value),
                 comments: form.elements.comments.value,
+                target: Object.assign({}, role.target, {[period]: newTarget}),
             };
-            if (Object.keys(updated).some((k) => updated[k] !== role[k])) {
+            if (JSON.stringify(updated) !== JSON.stringify(role)) {
                 dbUpdateRole(roleId, updated);
                 populateRolesAndTasks();
                 document.querySelector(`.role[data-role="${roleId}"]`).scrollIntoView({block: "center", inline: "center"});
@@ -377,6 +552,29 @@ function showRoleEditor(roleId, role) {
     }
     roleEditor.addEventListener("close", handleEdits, {once: true});
     roleEditor.showModal();
+}
+
+
+function updateRoles(...roleElems) {
+    if (roleElems.length === 0)
+        roleElems = document.querySelectorAll(".role");
+    for (const roleElem of roleElems) {
+        const roleId = roleElem.dataset.role;
+        const role = dbGetRole(roleId);
+        if (!role) continue;
+        const totalElem = roleElem.querySelector(".total-value");
+        const totalValue = totalElem.value = role.target[getCurrentPeriod()];
+        const usedValueElem = roleElem.querySelector(".used-value-text");
+        const usedSliderElem = roleElem.querySelector(".used-value-slider");
+        let usedValue = 0;
+        for (const taskId of dbTaskIds()) {
+            const task = dbGetTask(taskId);
+            if (task?.roles?.[role.type] === roleId) usedValue += task.value;
+        }
+        const usedPercent = totalValue <= 0 ? 0 : Math.round(100 * usedValue / totalValue);
+        usedSliderElem.style.width = (usedPercent / 2) + "%";
+        usedValueElem.textContent = displaySign(Math.round(usedValue - totalValue));
+    }
 }
 
 
@@ -427,7 +625,7 @@ function setupDraggableRole(roleElem, type) {
         const roleId = newRoleElem.dataset.role;
         const taskId = draggedElem.dataset.taskId;
         const task = dbGetTask(taskId);
-        task[type] = roleId;
+        task.roles[type] = roleId;
         dbUpdateTask(taskId, task);
         updateTask(taskId);
         updateRoles(oldRoleElem, newRoleElem);
@@ -560,8 +758,8 @@ function dbHasRole(roleId) {
 }
 
 function dbGetRole(roleId) {
-    const value = localStorage.getItem("#" + roleId);
-    return value && JSON.parse(value);
+    const jsonRole = localStorage.getItem("#" + roleId);
+    return jsonRole && JSON.parse(jsonRole);
 }
 
 function dbUpdateRole(roleId, role) {
@@ -592,8 +790,8 @@ function dbHasTask(taskId) {
 }
 
 function dbGetTask(taskId) {
-    const value = localStorage.getItem(":" + taskId);
-    return value && JSON.parse(value);
+    const jsonTask = localStorage.getItem(":" + taskId);
+    return jsonTask && JSON.parse(jsonTask);
 }
 
 function dbUpdateTask(taskId, task) {

@@ -219,12 +219,8 @@ header {
 }
 header > div {
     padding: 0 16px;
-}
-#export-data {
-    float: right;
-}
-#import-data {
-    float: left;
+    display: flex;
+    justify-content: space-between;
 }
 #import-data input {
     display: none;
