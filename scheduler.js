@@ -157,7 +157,6 @@ function setupImportExport() {
 
 
 function exportData() {
-    cleanTasks();
     const text = JSON.stringify(dbGetAllData(), null, 4);
     const href = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
     let elem = newElem("a", {href: href, download: SETTINGS.fileName, style: "display:none"});
@@ -411,6 +410,7 @@ function showTaskEditor(taskElem) {
             const updated = {
                 value: parseFloat(form.elements.value.value),
                 comments: form.elements.comments.value,
+                period: task.period,
                 roles: {},
             };
             for (const type in task.roles) {
@@ -487,7 +487,7 @@ function addNewRole(event) {
     const selectElem = event.target;
     if (selectElem.value === "+") {
         const roleId = "role-" + Math.floor((Math.random() + 1) * 1e10).toString(36);
-        showRoleEditor(roleId, {type: selectElem.dataset.type});
+        showRoleEditor(roleId, {type: selectElem.dataset.type, target: {}});
     } else {
         const roleId = selectElem.value;
         const role = dbGetRole(roleId);
@@ -542,10 +542,19 @@ function showRoleEditor(roleId, role) {
                 document.querySelector(`.role[data-role="${roleId}"]`).scrollIntoView({block: "center", inline: "center"});
             }
         } else if (roleEditor.returnValue === "delete") {
-            if (dbTaskIds().some((id) => dbGetTask(id)[role.type] === roleId)) {
+            const populated = dbTaskIds().some((id) => {
+                const task = dbGetTask(id);
+                return task.period === period && task.roles[role.type] === roleId;
+            });
+            if (populated) {
                 alert("You have to remove all tasks before you can remove the role");
             } else if (confirm(`Are you certain you want to remove role ${role.name}?`)) {
+                delete role.target[period];
+                if (Object.keys(role.target).length === 0) {
                 dbDeleteRole(roleId);
+                } else {
+                    dbUpdateRole(roleId, role);
+                }
                 populateRolesAndTasks();
             }
         }
@@ -556,6 +565,7 @@ function showRoleEditor(roleId, role) {
 
 
 function updateRoles(...roleElems) {
+    const period = getCurrentPeriod();
     if (roleElems.length === 0)
         roleElems = document.querySelectorAll(".role");
     for (const roleElem of roleElems) {
@@ -569,7 +579,7 @@ function updateRoles(...roleElems) {
         let usedValue = 0;
         for (const taskId of dbTaskIds()) {
             const task = dbGetTask(taskId);
-            if (task?.roles?.[role.type] === roleId) usedValue += task.value;
+            if (task?.period === period && task?.roles?.[role.type] === roleId) usedValue += task.value;
         }
         const usedPercent = totalValue <= 0 ? 0 : Math.round(100 * usedValue / totalValue);
         usedSliderElem.style.width = (usedPercent / 2) + "%";

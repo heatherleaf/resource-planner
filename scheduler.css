@@ -222,6 +222,10 @@ header > div {
     display: flex;
     justify-content: space-between;
 }
+header > div > * {
+    display: inline-block;
+    margin: 0;
+}
 #import-data input {
     display: none;
 }
