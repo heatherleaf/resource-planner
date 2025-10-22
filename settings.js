@@ -1,7 +1,7 @@
 
 var SETTINGS = {
     fileName: "schedule.json",
-    unknownPeriodName: "<Period with no name>",
+    unknownPeriodName: "Unnamed period",
     newRoleValue: {
         senior: 850,
         junior: 340,

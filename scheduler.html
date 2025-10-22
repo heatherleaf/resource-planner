@@ -12,18 +12,20 @@
 
 <header>
   <div>
-    <h1>Planning <span id="current-period"></span></h1>
+    <h1><span id="current-period"></span></h1>
     <div id="select-period"><select name="select-period"></select></div>
     <div>
       <select class="add-role" data-type="person">
         <option selected disabled>Add person</option>
         <option value="+">Create new person</option>
+        <option disabled>Add from another period:</option>
         <optgroup label="Senior" data-group="senior"></optgroup>
         <optgroup label="Junior" data-group="junior"></optgroup>
       </select>
       <select class="add-role" data-type="course">
         <option selected disabled>Add course or project</option>
         <option value="+">Create new course/project</option>
+        <option disabled>Add from another period:</option>
         <optgroup label="LP3" data-group="lp3"></optgroup>
         <optgroup label="LP4" data-group="lp4"></optgroup>
         <optgroup label="LP1" data-group="lp1"></optgroup>

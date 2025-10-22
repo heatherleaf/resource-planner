@@ -16,7 +16,8 @@ div, span {
     border: 2px solid black;
     border-radius: 16px;
     margin: 8px;
-    resize: horizontal;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .role:open {

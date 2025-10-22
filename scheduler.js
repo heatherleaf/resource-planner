@@ -5,7 +5,7 @@ function initialise() {
     setupImportExport();
     setupAddRole();
     setupPeriods();
-    populateRolesAndTasks();
+    selectPeriod();
 }
 
 
@@ -13,16 +13,15 @@ function initialise() {
 // Handling periods
 
 function setupPeriods() {
-    const periods = {};
-    for (const roleId of dbRoleIds()) {
-        for (p in dbGetRole(roleId).target) periods[p] = true;
-    }
-    const sortedPeriods = Object.keys(periods).toSorted((a,b) => -a.localeCompare(b));
-    if (sortedPeriods.length === 0) {
-        sortedPeriods.push(SETTINGS.unknownPeriodName);
-    }
+    const periods = dbGetPeriods();
+    for (const roleId of dbRoleIds())
+        for (p in dbGetRole(roleId).target)
+            if (!periods.includes(p)) {
+                console.warn(`Database doesn't list period ${p}, adding it.`);
+                dbInsertPeriod(p);
+            }
     const periodSelect = document.querySelector("#select-period select");
-    for (const period of sortedPeriods) {
+    for (const period of periods) {
         periodSelect.appendChild(newElem("option", period, {value: period}));
     }
     periodSelect.appendChild(newElem("option", "────────────────────", {value: "%", disabled: true}));
@@ -30,50 +29,83 @@ function setupPeriods() {
     periodSelect.appendChild(newElem("option", "Add new empty period", {value: "+"}));
     periodSelect.appendChild(newElem("option", "Clone this period", {value: "="}));
     periodSelect.appendChild(newElem("option", "Delete this period", {value: "-"}));
-    periodSelect.selectedIndex = 0;
-    document.querySelector("#current-period").textContent = periodSelect.value;
     periodSelect.addEventListener("change", (event) => {
         const currentPeriod = getCurrentPeriod();
-        let newPeriod = periodSelect.value;
-        if (periodSelect.value === "/") {
-            const newName = prompt("What is the new name of the period?");
-            if (newName && sortedPeriods.includes(newName)) {
-                alert(`The period ${newName} already exists.`);
-            } else if (newName) {
-                newPeriod = newName;
+        if (!"%/+=-".includes(periodSelect.value)) {
+            setNewPeriod(periodSelect.value);
+            return;
+        } else if (periodSelect.value === "/") {
+            const newPeriod = prompt("What is the new name of the period?");
+            if (newPeriod && !dbGetPeriods().includes(newPeriod)) {
                 renamePeriod(currentPeriod, newPeriod);
                 const option = periodSelect.querySelector(`option[value="${currentPeriod}"]`);
                 option.value = option.textContent = newPeriod;
+                setNewPeriod(newPeriod);
+                return;
+            } else if (newPeriod) {
+                alert(`The period ${newPeriod} already exists.`);
             }
         } else if (periodSelect.value === "+" || periodSelect.value === "=") {
-            newPeriod = prompt("What is the name of the new period?");
+            const newPeriod = prompt("What is the name of the new period?");
             if (newPeriod) {
+                dbInsertPeriod(newPeriod);
                 periodSelect.insertBefore(newElem("option", newPeriod, {value: newPeriod}), periodSelect.childNodes[0]);
                 if (periodSelect.value === "=") {
                     clonePeriod(currentPeriod, newPeriod);
                 }
+                setNewPeriod(newPeriod);
+                return;
             }
         } else if (periodSelect.value === "-") {
-            newPeriod = currentPeriod;
             if (prompt(`Are you sure you want to delete ${currentPeriod}?\nIf so, type "YES":`) === "YES") {
                 deletePeriod(currentPeriod);
                 periodSelect.querySelector(`option[value="${currentPeriod}"]`).remove();
-                newPeriod = periodSelect.childNodes[0].value;
-                if (newPeriod === "%") {
-                    newPeriod = SETTINGS.unknownPeriodName;
-                    periodSelect.insertBefore(newElem("option", newPeriod, {value: newPeriod}), periodSelect.childNodes[0]);
-                }
+                setNewPeriod(getMostRecentPeriod());
+                return;
             }
         }
-        periodSelect.querySelector(`option[value="${newPeriod}"]`).selected = true;
-        document.querySelector("#current-period").textContent = periodSelect.value;
-        populateRolesAndTasks();
+        option = periodSelect.querySelector(`option[value="${currentPeriod}"]`).selected = true;
     });
 }
 
 
+function selectPeriod() {
+    const period = getCurrentPeriod();
+    const periodSelect = document.querySelector("#select-period select");
+    const periodOption = periodSelect.querySelector(`option[value="${period}"]`);
+    if (!periodOption) {
+        setNewPeriod(getMostRecentPeriod());
+    } else {
+        periodOption.selected = true;
+        document.querySelector("#current-period").textContent = periodSelect.value;
+        populateRolesAndTasks();
+    }
+}
+
+
+function setNewPeriod(period) {
+    window.location.search = period.replaceAll(" ", "+");
+}
+
+
+function getMostRecentPeriod() {
+    const periodSelect = document.querySelector("#select-period select");
+    const period = periodSelect.childNodes[0].value;
+    if (period !== "%") {
+        return period;
+    } else {
+        dbInsertPeriod(SETTINGS.unknownPeriodName);
+        periodSelect.insertBefore(
+            newElem("option", SETTINGS.unknownPeriodName, {value: SETTINGS.unknownPeriodName}),
+            periodSelect.childNodes[0],
+        );
+        return getMostRecentPeriod();
+    }
+}
+
+
 function getCurrentPeriod() {
-    return document.querySelector("#current-period").textContent;
+    return window.location.search.replace(/^\?/, "").replaceAll("+", " ");
 }
 
 
@@ -90,9 +122,13 @@ function renamePeriod(oldPeriod, newPeriod) {
         const task = dbGetTask(taskId);
         if (task.period === oldPeriod) {
             task.period = newPeriod;
-            dbUpdateTask(taskId);
+            dbUpdateTask(taskId, task);
         }
     }
+    const periods = dbGetPeriods();
+    const i = periods.indexOf(oldPeriod);
+    periods[i] = newPeriod;
+    dbSetPeriods(periods);
 }
 
 
@@ -114,6 +150,7 @@ function deletePeriod(period) {
             dbDeleteTask(taskId);
         }
     }
+    dbDeletePeriod(period);
 }
 
 
@@ -140,6 +177,7 @@ function clonePeriod(fromPeriod, toPeriod) {
             dbUpdateTask(newTaskId, task);
         }
     }
+    dbInsertPeriod(toPeriod);
 }
 
 
@@ -740,15 +778,41 @@ function dbClearDatabase() {
 
 function dbReplaceAllData(data) {
     dbClearDatabase();
+    dbSetPeriods(data.periods);
     for (const roleId in data.roles) dbUpdateRole(roleId, data.roles[roleId]);
     for (const taskId in data.tasks) dbUpdateTask(taskId, data.tasks[taskId]);
 }
 
 function dbGetAllData() {
     const data = {roles: {}, tasks: {}};
+    data.periods = dbGetPeriods();
     for (const roleId of dbRoleIds()) data.roles[roleId] = dbGetRole(roleId);
     for (const taskId of dbTaskIds()) data.tasks[taskId] = dbGetTask(taskId);
     return data;
+}
+
+function dbGetPeriods() {
+    const jsonPeriods = localStorage.getItem("periods");
+    return jsonPeriods && JSON.parse(jsonPeriods);
+}
+
+function dbSetPeriods(periods) {
+    localStorage.setItem("periods", JSON.stringify(periods));
+}
+
+function dbInsertPeriod(period) {
+    const periods = dbGetPeriods();
+    if (periods.includes(period)) return;
+    periods.splice(0, 0, period);
+    localStorage.setItem("periods", JSON.stringify(periods));
+}
+
+function dbDeletePeriod(period) {
+    const periods = dbGetPeriods();
+    const i = periods.indexOf(period);
+    if (i < 0) return;
+    periods.splice(i, 1);
+    localStorage.setItem("periods", JSON.stringify(periods));
 }
 
 function dbRoleIds() {
