@@ -24,14 +24,17 @@ function setupPeriods() {
     for (const period of periods) {
         periodSelect.appendChild(newElem("option", period, {value: period}));
     }
+    periodSelect.appendChild(newElem("option", "Summary", {value: ""}));
     periodSelect.appendChild(newElem("option", "────────────────────", {value: "%", disabled: true}));
-    periodSelect.appendChild(newElem("option", "Rename this period", {value: "/"}));
     periodSelect.appendChild(newElem("option", "Add new empty period", {value: "+"}));
-    periodSelect.appendChild(newElem("option", "Clone this period", {value: "="}));
-    periodSelect.appendChild(newElem("option", "Delete this period", {value: "-"}));
+    if (getCurrentPeriod()) {
+        periodSelect.appendChild(newElem("option", "Clone this period", {value: "="}));
+        periodSelect.appendChild(newElem("option", "Rename this period", {value: "/"}));
+        periodSelect.appendChild(newElem("option", "Delete this period", {value: "-"}));
+    }
     periodSelect.addEventListener("change", (event) => {
         const currentPeriod = getCurrentPeriod();
-        if (!"%/+=-".includes(periodSelect.value)) {
+        if (dbGetPeriods().includes(periodSelect.value) || !periodSelect.value) {
             setNewPeriod(periodSelect.value);
             return;
         } else if (periodSelect.value === "/") {
@@ -60,7 +63,7 @@ function setupPeriods() {
             if (prompt(`Are you sure you want to delete ${currentPeriod}?\nIf so, type "YES":`) === "YES") {
                 deletePeriod(currentPeriod);
                 periodSelect.querySelector(`option[value="${currentPeriod}"]`).remove();
-                setNewPeriod(getMostRecentPeriod());
+                setNewPeriod("");
                 return;
             }
         }
@@ -70,16 +73,13 @@ function setupPeriods() {
 
 
 function selectPeriod() {
-    const period = getCurrentPeriod();
     const periodSelect = document.querySelector("#select-period select");
+    const period = getCurrentPeriod();
     const periodOption = periodSelect.querySelector(`option[value="${period}"]`);
-    if (!periodOption) {
-        setNewPeriod(getMostRecentPeriod());
-    } else {
-        periodOption.selected = true;
-        document.querySelector("#current-period").textContent = periodSelect.value;
-        populateRolesAndTasks();
-    }
+    periodOption.selected = true;
+    document.querySelector("#current-period").textContent = periodOption.textContent;
+    if (!period) document.querySelector("body").classList.add("summary");
+    populateRolesAndTasks();
 }
 
 
@@ -88,24 +88,9 @@ function setNewPeriod(period) {
 }
 
 
-function getMostRecentPeriod() {
-    const periodSelect = document.querySelector("#select-period select");
-    const period = periodSelect.childNodes[0].value;
-    if (period !== "%") {
-        return period;
-    } else {
-        dbInsertPeriod(SETTINGS.unknownPeriodName);
-        periodSelect.insertBefore(
-            newElem("option", SETTINGS.unknownPeriodName, {value: SETTINGS.unknownPeriodName}),
-            periodSelect.childNodes[0],
-        );
-        return getMostRecentPeriod();
-    }
-}
-
-
 function getCurrentPeriod() {
-    return window.location.search.replace(/^\?/, "").replaceAll("+", " ");
+    const period = window.location.search.replace(/^\?/, "").replaceAll("+", " ");
+    return dbGetPeriods().includes(period) ? period : "";
 }
 
 
@@ -243,9 +228,11 @@ function populateRolesAndTasks() {
     for (const roleId of sortedIds) {
         populateRole(roleId);
     }
-    populateAddTaskDropdown(sortedIds);
-    for (const taskId of dbTaskIds()) {
-        populateTask(taskId, true);
+    if (getCurrentPeriod()) {
+        populateAddTaskDropdown(sortedIds);
+        for (const taskId of dbTaskIds()) {
+            populateTask(taskId, true);
+        }
     }
     updateRoles();
 }
@@ -254,9 +241,10 @@ function populateRolesAndTasks() {
 function populateRole(roleId) {
     const role = dbGetRole(roleId);
     const currentPeriod = getCurrentPeriod();
-    if (role.target[currentPeriod] == null) return;
+    if (currentPeriod && role.target[currentPeriod] == null) return;
 
     const template = document.querySelector(`#${role.type}-template`);
+    if (!template) return;
     const roleElem = template.content.cloneNode(true).querySelector(".role");
     roleElem.dataset.role = roleId;
     if (role.group) roleElem.classList.add(role.group);
@@ -266,24 +254,30 @@ function populateRole(roleId) {
         (role.comments ? "\n\n" + role.comments : "")
     );
 
-    roleElem.querySelector(".edit-role")?.addEventListener("click", editRole);
-
+    // Add the role to the container
     let containerElem;
     if (role.group) containerElem = document.querySelector(`.container[data-type="${role.type}"][data-group="${role.group}"]`);
     if (!containerElem) containerElem = document.querySelector(`.container[data-type="${role.type}"]`);
     containerElem.append(roleElem);
 
-    // Drag and drop
-    setupDraggableRole(roleElem, role.type);
+    if (currentPeriod) {
+        // Edit the role
+        roleElem.querySelector(".edit-role")?.addEventListener("click", editRole);
 
-    // Changing the total target value of a role
-    const totalElem = roleElem.querySelector(".total-value");
-    totalElem.addEventListener("change", (event) => {
-        role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
-        dbUpdateRole(roleId, role);
-        updateRoles(roleElem);
-        totalElem.blur();
-    });
+        // Drag and drop
+        setupDraggableRole(roleElem, role.type);
+
+        // Changing the total target value of a role
+        const totalElem = roleElem.querySelector(".total-value");
+        totalElem.addEventListener("change", (event) => {
+            role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
+            dbUpdateRole(roleId, role);
+            updateRoles(roleElem);
+            totalElem.blur();
+        });
+    } else {
+        roleElem.removeAttribute("open");
+    }
 
     // Alt-clicking a <details> will open/close all sibling <details> too
     const summaryElem = roleElem.querySelector("summary");
@@ -611,14 +605,14 @@ function updateRoles(...roleElems) {
         const role = dbGetRole(roleId);
         if (!role) continue;
         const totalElem = roleElem.querySelector(".total-value");
-        const totalValue = totalElem.value = role.target[getCurrentPeriod()];
+        const totalValue = period ? role.target[period] : sum(Object.values(role.target));
+        totalElem.value = totalValue;
         const usedValueElem = roleElem.querySelector(".used-value-text");
         const usedSliderElem = roleElem.querySelector(".used-value-slider");
-        let usedValue = 0;
-        for (const taskId of dbTaskIds()) {
-            const task = dbGetTask(taskId);
-            if (task?.period === period && task?.roles?.[role.type] === roleId) usedValue += task.value;
-        }
+        const usedValue = sum(dbTaskIds().map((id) => {
+            const task = dbGetTask(id);
+            return (!period || task?.period === period) && (task?.roles?.[role.type] === roleId) ? task.value : 0;
+        }));
         const usedPercent = totalValue <= 0 ? 0 : Math.round(100 * usedValue / totalValue);
         usedSliderElem.style.width = (usedPercent / 2) + "%";
         usedValueElem.textContent = displaySign(Math.round(usedValue - totalValue));
@@ -750,6 +744,11 @@ function debounce(func) {
 
 function displaySign(number) {
     return (number > 0 ? "+" : number < 0 ? "–" : "±") + Math.abs(number);
+}
+
+
+function sum(array) {
+    return array.reduce((sum, val) => sum + parseFloat(val), 0);
 }
 
 

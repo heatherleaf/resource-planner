@@ -174,6 +174,10 @@ summary > * {
     resize: horizontal;
 }
 
+.task:active {
+    cursor: grabbing;
+}
+
 .role-values {
     display: grid;
     grid-template: 1fr / 1fr;
@@ -187,10 +191,6 @@ summary > * {
     text-wrap: nowrap;
 }
 
-.task:active {
-    cursor: grabbing;
-}
-
 .placeholder {
     background-color: gainsboro;
     color: grey;
@@ -200,6 +200,14 @@ summary > * {
 
 .dragged {
     opacity: 0.2;
+}
+
+
+.summary .role > div {
+    display: none;
+}
+.summary input, .summary select.add-role {
+    pointer-events: none;
 }
 
 
