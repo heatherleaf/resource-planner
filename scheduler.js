@@ -78,7 +78,7 @@ function selectPeriod() {
     const periodOption = periodSelect.querySelector(`option[value="${period}"]`);
     periodOption.selected = true;
     document.querySelector("#current-period").textContent = periodOption.textContent;
-    if (!period) document.querySelector("body").classList.add("summary");
+    if (!period) document.querySelector("body").classList.add("summary-all-periods");
     populateRolesAndTasks();
 }
 

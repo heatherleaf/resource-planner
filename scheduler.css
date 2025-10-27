@@ -203,10 +203,10 @@ summary > * {
 }
 
 
-.summary .role > div {
+.summary-all-periods .role > div {
     display: none;
 }
-.summary input, .summary select.add-role {
+.summary-all-periods input, .summary-all-periods select.add-role {
     pointer-events: none;
 }
 
