@@ -19,4 +19,16 @@ var SETTINGS = {
         minValue: 10,
         snapDelta: 10,
     },
+    calculation: {
+        person: (role, period) => {
+            const percent = role.size[period];
+            const hours = Math.round(1700 * percent / 100);
+            if (percent) return ` → ${hours} h`;
+        },
+        course: (role, period) => {
+            const students = role.size[period];
+            const hours = Math.round(260 + 8 * students);
+            if (students) return ` → ${hours} h`;
+        },
+    },
 };

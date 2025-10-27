@@ -245,11 +245,11 @@ function populateRole(roleId) {
 
     const template = document.querySelector(`#${role.type}-template`);
     if (!template) return;
-    const roleElem = template.content.cloneNode(true).querySelector(".role");
+    const roleElem = template.content.cloneNode(true).querySelector("form.role");
     roleElem.dataset.role = roleId;
     if (role.group) roleElem.classList.add(role.group);
-    roleElem.querySelector(".role-name").textContent = role.name;
-    roleElem.querySelector(".role-name").title = (
+    roleElem.elements["name"].value = role.name;
+    roleElem.elements["name"].title = (
         (role.nickname || role.name) +
         (role.comments ? "\n\n" + role.comments : "")
     );
@@ -268,23 +268,37 @@ function populateRole(roleId) {
         setupDraggableRole(roleElem, role.type);
 
         // Changing the total target value of a role
-        const totalElem = roleElem.querySelector(".total-value");
+        const totalElem = roleElem.elements["total-value"];
         totalElem.addEventListener("change", (event) => {
             role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
             dbUpdateRole(roleId, role);
             updateRoles(roleElem);
             totalElem.blur();
         });
+
+        // The extra information "size"
+        const sizeElem = roleElem.elements["size"];
+        if (sizeElem) {
+            sizeElem.addEventListener("change", (event) => {
+                if (!role.size) role.size = {};
+                const size = parseInt(sizeElem.value);
+                role.size[currentPeriod] = size || 0;
+                sizeElem.value = size || "";
+                dbUpdateRole(roleId, role);
+                updateRoles(roleElem);
+                sizeElem.blur();
+            })
+        }
     } else {
-        roleElem.removeAttribute("open");
+        roleElem.querySelector("details").removeAttribute("open");
     }
 
     // Alt-clicking a <details> will open/close all sibling <details> too
     const summaryElem = roleElem.querySelector("summary");
     summaryElem.addEventListener("click", (event) => {
         if (event.altKey) {
-            const isOpen = roleElem.open;
-            roleElem.closest(".container").querySelectorAll(".role").forEach((elem) => {
+            const isOpen = roleElem.querySelector("details").open;
+            roleElem.closest(".container").querySelectorAll("form.role details").forEach((elem) => {
                 if (isOpen) elem.removeAttribute("open");
                 else elem.setAttribute("open", true)
             });
@@ -301,17 +315,16 @@ function populateAddTaskDropdown(sortedIds) {
     for (const addElem of document.querySelectorAll(`select.add-task`)) {
         addElem.replaceChildren();
         addElem.appendChild(newElem("option", "+", {disabled: true, selected: true}));
-        const group = addElem.dataset.group;
         for (const roleId of sortedIds) {
             const role = dbGetRole(roleId);
             if (currentPeriod in role.target) {
-                if (group === role.group || group === role.type) {
+                if (addElem.name === role.group || addElem.name === role.type) {
                     addElem.appendChild(newElem("option", role.name, {value: role.type + ":" + roleId}));
                 }
             }
         }
 
-        const otherId = addElem.closest(".role").dataset.role;
+        const otherId = addElem.closest("form.role").dataset.role;
         const other = dbGetRole(otherId);
         const newValue = SETTINGS.newTaskValue[other.group] || SETTINGS.newTaskValue[other.type];
         addElem.addEventListener("change", (event) => {
@@ -401,7 +414,7 @@ function populateTask(taskId, dontUpdateRoles = false) {
 function deleteTask(taskId) {
     const roleElems = [];
     for (const taskElem of document.querySelectorAll(`.task[data-task-id="${taskId}"]`)) {
-        roleElems.push(taskElem.closest(".role"));
+        roleElems.push(taskElem.closest("form.role"));
         taskElem.remove();
     }
     updateRoles(...roleElems);
@@ -468,7 +481,7 @@ function updateTask(taskId) {
     if (!task) return;
     const taskElems = document.querySelectorAll(`.task[data-task-id="${taskId}"]`);
     for (const taskElem of taskElems) {
-        const roleId = taskElem.closest(".role").dataset.role;
+        const roleId = taskElem.closest("form.role").dataset.role;
         const taskRoles = Object.keys(task.roles).flatMap((type) =>
             (task.roles[type] !== roleId) ? dbGetRole(task.roles[type]) : []
         );
@@ -540,7 +553,7 @@ function addNewRole(event) {
 
 function editRole(event) {
     event.preventDefault();
-    const roleId = event.target.closest(".role").dataset.role;
+    const roleId = event.target.closest("form.role").dataset.role;
     showRoleEditor(roleId, dbGetRole(roleId));
 }
 
@@ -556,6 +569,9 @@ function showRoleEditor(roleId, role) {
     form.elements.group.value = role.group || "";
     form.elements.comments.value = role.comments || "";
     form.elements.target.value = role.target[period] || 0;
+    if (form.elements.size) {
+        form.elements.size.value = role.size?.[period] || 0;
+    }
 
     function handleEdits() {
         if (roleEditor.returnValue === "ok") {
@@ -568,6 +584,10 @@ function showRoleEditor(roleId, role) {
                 comments: form.elements.comments.value,
                 target: Object.assign({}, role.target, {[period]: newTarget}),
             };
+            if (form.elements.size) {
+                const newSize = parseFloat(form.elements.size.value);
+                updated.size = Object.assign({}, role.size, {[period]: newSize});
+            }
             if (JSON.stringify(updated) !== JSON.stringify(role)) {
                 dbUpdateRole(roleId, updated);
                 populateRolesAndTasks();
@@ -599,16 +619,16 @@ function showRoleEditor(roleId, role) {
 function updateRoles(...roleElems) {
     const period = getCurrentPeriod();
     if (roleElems.length === 0)
-        roleElems = document.querySelectorAll(".role");
+        roleElems = document.querySelectorAll("form.role");
     for (const roleElem of roleElems) {
         const roleId = roleElem.dataset.role;
         const role = dbGetRole(roleId);
         if (!role) continue;
-        const totalElem = roleElem.querySelector(".total-value");
+        const totalElem = roleElem.elements["total-value"];
         const totalValue = period ? role.target[period] : sum(Object.values(role.target));
         totalElem.value = totalValue;
-        const usedValueElem = roleElem.querySelector(".used-value-text");
-        const usedSliderElem = roleElem.querySelector(".used-value-slider");
+        const usedValueElem = roleElem.elements["used-value-text"];
+        const usedSliderElem = roleElem.elements["used-value-slider"];
         const usedValue = sum(dbTaskIds().map((id) => {
             const task = dbGetTask(id);
             return (!period || task?.period === period) && (task?.roles?.[role.type] === roleId) ? task.value : 0;
@@ -616,6 +636,22 @@ function updateRoles(...roleElems) {
         const usedPercent = totalValue <= 0 ? 0 : Math.round(100 * usedValue / totalValue);
         usedSliderElem.style.width = (usedPercent / 2) + "%";
         usedValueElem.textContent = displaySign(Math.round(usedValue - totalValue));
+        const sizeElem = roleElem.elements["size"];
+        if (sizeElem) {
+            const size = role.size?.[period];
+            sizeElem.value = size || "";
+        }
+        const calcElem = roleElem.elements["calculated"];
+        if (calcElem){
+            const calcFun = SETTINGS.calculation?.[role.type];
+            if (calcElem && calcFun) {
+                try {
+                    calcElem.value = calcFun(role, period) || "";
+                } catch {
+                    calcElem.value = "";
+                }
+            }
+        }
     }
 }
 
@@ -658,12 +694,12 @@ function setupDraggableRole(roleElem, type) {
         const draggedElem = document.querySelector(".dragged");
         const placeholderElem = document.querySelector(".placeholder");
         if (!placeholderElem) return;
-        const oldRoleElem = draggedElem.closest(".role");
+        const oldRoleElem = draggedElem.closest("form.role");
         draggedElem.remove();
         const tasklistSelector = DRAG_DROP_DATA.tasklistSelector;
         roleElem.querySelector(tasklistSelector).insertBefore(draggedElem, placeholderElem);
         placeholderElem.remove();
-        const newRoleElem = draggedElem.closest(".role");
+        const newRoleElem = draggedElem.closest("form.role");
         const roleId = newRoleElem.dataset.role;
         const taskId = draggedElem.dataset.taskId;
         const task = dbGetTask(taskId);

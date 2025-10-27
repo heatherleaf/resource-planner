@@ -52,7 +52,7 @@
     <div class="container" data-type="person" data-group="junior"></div>
   </details>
 
-  <h2>Courses/projects (budget = 250 + 10n, where n is #students)</h2>
+  <h2>Courses/projects</h2>
   <details open>
     <summary><h3>LP3, Jan-Mar</h3></summary>
     <div class="container" data-type="course" data-group="lp3"></div>
@@ -80,44 +80,54 @@
 </main>
 
 <template id="person-template">
-  <details class="role person" open>
-    <summary>
-      <span class="edit-role">&hellip;</span>
-      <h4 class="role-name">Name</h4>
-      <div class="role-values">
-        <div>
-          <div class="used-value-slider">&nbsp;</div>
+  <form class="role person" method="dialog">
+    <details open>
+      <summary>
+        <h4><output name="name">Name</output></h4>
+        <span class="edit-role">&hellip;</span>
+        <div class="nosummary">
+          <input name="size" type="text" inputmode="numeric" pattern="\d+" size="4"/>%
+          <output name="calculated" type="text"></output>
         </div>
-        <div>
-          <input class="total-value" type="text" inputmode="numeric" pattern="\d+" size="4"/>
-          <span class="used-value-text">95%</span>
+        <div class="overlay">
+          <output name="used-value-slider">&nbsp;</output>
+          <div class="twocolumn">
+            <input name="total-value" type="text" inputmode="numeric" pattern="\d+" size="4"/>
+            <output name="used-value-text">95%</output>
+          </div>
         </div>
-      </div>
-    </summary>
-    <div class="lp3"><select class="add-task" data-group="lp3"></select><div class="tasklist"></div></div>
-    <div class="lp4"><select class="add-task" data-group="lp4"></select><div class="tasklist"></div></div>
-    <div class="lp1"><select class="add-task" data-group="lp1"></select><div class="tasklist"></div></div>
-    <div class="lp2"><select class="add-task" data-group="lp2"></select><div class="tasklist"></div></div>
-    <div class="other"><select class="add-task" data-group="other"></select><div class="tasklist"></div></div>
-  </details>
+      </summary>
+      <div class="nosummary lp3"><select class="add-task" name="lp3"></select><div class="tasklist"></div></div>
+      <div class="nosummary lp4"><select class="add-task" name="lp4"></select><div class="tasklist"></div></div>
+      <div class="nosummary lp1"><select class="add-task" name="lp1"></select><div class="tasklist"></div></div>
+      <div class="nosummary lp2"><select class="add-task" name="lp2"></select><div class="tasklist"></div></div>
+      <div class="nosummary other"><select class="add-task" name="other"></select><div class="tasklist"></div></div>
+    </details>
+  </form>
 </template>
 
 <template id="course-template">
-  <details class="role course" open>
-    <summary>
-      <span class="edit-role">&hellip;</span>
-      <h4 class="role-name">Name</h4>
-      <div class="role-values">
-        <div class="used-value-slider">&nbsp;</div>
-        <div>
-          <input class="total-value" type="text" inputmode="numeric" pattern="\d+" size="4"/>
-          <span class="used-value-text">95%</span>
+  <form class="role course" method="dialog">
+    <details open>
+      <summary>
+        <h4><output name="name">Name</output></h4>
+        <span class="edit-role">&hellip;</span>
+        <div class="nosummary">
+          <input name="size" type="text" inputmode="numeric" pattern="\d+" size="4"/> students
+          <output name="calculated" type="text"></output>
         </div>
-      </div>
-    </summary>
-    <div class="senior"><select class="add-task" data-group="senior"></select><div class="tasklist"></div></div>
-    <div class="junior"><select class="add-task" data-group="junior"></select><div class="tasklist"></div></div>
-  </details>
+        <div class="overlay">
+          <output name="used-value-slider">&nbsp;</output>
+          <div class="twocolumn">
+            <input name="total-value" type="text" inputmode="numeric" pattern="\d+" size="4"/>
+            <output name="used-value-text">95%</output>
+          </div>
+        </div>
+      </summary>
+      <div class="nosummary senior"><select class="add-task" name="senior"></select><div class="tasklist"></div></div>
+      <div class="nosummary junior"><select class="add-task" name="junior"></select><div class="tasklist"></div></div>
+    </details>
+  </form>
 </template>
 
 
@@ -194,6 +204,11 @@
           <option value="lp2">LP2 (Nov-Jan)</option>
           <option value="other">Other course or project</option>
         </select>
+      </td></tr>
+      <tr><td>
+        <label for="size">N:o students</label>
+      </td><td>
+        <input name="size" type="number" min="0" value="0"/>
       </td></tr>
       <tr><td>
         <label for="comments">Comments</label>
