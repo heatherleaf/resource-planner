@@ -21,13 +21,13 @@ var SETTINGS = {
     },
     calculation: {
         person: (role, period) => {
-            const percent = role.size[period];
+            const percent = period ? role.size[period] : sum(Object.values(role.size));
             const hours = Math.round(1700 * percent / 100);
             if (percent) return ` → ${hours} h`;
         },
         course: (role, period) => {
-            const students = role.size[period];
-            const hours = Math.round(260 + 8 * students);
+            const students = period ? role.size[period] : sum(Object.values(role.size));
+            const hours = Math.round(160 + 6 * students);
             if (students) return ` → ${hours} h`;
         },
     },

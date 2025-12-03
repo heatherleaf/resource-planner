@@ -638,7 +638,7 @@ function updateRoles(...roleElems) {
         usedValueElem.textContent = displaySign(Math.round(usedValue - totalValue));
         const sizeElem = roleElem.elements["size"];
         if (sizeElem) {
-            const size = role.size?.[period];
+            const size = !role.size ? null : period ? role.size[period] : sum(Object.values(role.size));
             sizeElem.value = size || "";
         }
         const calcElem = roleElem.elements["calculated"];

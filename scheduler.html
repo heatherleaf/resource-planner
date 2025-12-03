@@ -41,7 +41,7 @@
 </header>
 
 <main>
-  <h2>People (100% ≈ 1700/1725/1750h, 20% ≈ 340/345/350h)</h2>
+  <h2>People (100% = 1700h, 20% = 340h)</h2>
   <details open>
     <summary><h3>Seniors</h3></summary>
     <div class="container" data-type="person" data-group="senior"></div>
@@ -81,11 +81,11 @@
 
 <template id="person-template">
   <form class="role person" method="dialog">
-    <details open>
+    <details>
       <summary>
         <h4><output name="name">Name</output></h4>
         <span class="edit-role">&hellip;</span>
-        <div class="nosummary">
+        <div>
           <input name="size" type="text" inputmode="numeric" pattern="\d+" size="4"/>%
           <output name="calculated" type="text"></output>
         </div>
@@ -108,11 +108,11 @@
 
 <template id="course-template">
   <form class="role course" method="dialog">
-    <details open>
+    <details>
       <summary>
         <h4><output name="name">Name</output></h4>
         <span class="edit-role">&hellip;</span>
-        <div class="nosummary">
+        <div>
           <input name="size" type="text" inputmode="numeric" pattern="\d+" size="4"/> students
           <output name="calculated" type="text"></output>
         </div>
