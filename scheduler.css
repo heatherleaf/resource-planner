@@ -31,7 +31,7 @@ form.role {
     width: 300px;
 }
 
-.role.junior details:open {
+.role.phdstudent details:open {
     width: 200px;
 }
 
@@ -72,11 +72,17 @@ form.lp2 > details, details > .lp2 {
 form.other > details, details > .other {
     background-color: color-mix(in srgb, slategray 40%, white);
 }
-form.senior > details, details > .senior {
+form.faculty > details, details > .faculty {
     background-color: color-mix(in srgb, royalblue 35%, white);
 }
-form.junior > details, details > .junior {
+form.postdoc > details, details > .postdoc {
+    background-color: color-mix(in srgb, purple 30%, white);
+}
+form.phdstudent > details, details > .phdstudent {
     background-color: color-mix(in srgb, cadetblue, white);
+}
+form.amanuens > details, details > .amanuens {
+    background-color: color-mix(in srgb, slateblue 30%, white);
 }
 
 .role details > * {

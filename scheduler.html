@@ -19,8 +19,10 @@
         <option selected disabled>Add person</option>
         <option value="+">Create new person</option>
         <option disabled>Add from another period:</option>
-        <optgroup label="Senior" data-group="senior"></optgroup>
-        <optgroup label="Junior" data-group="junior"></optgroup>
+        <optgroup label="Faculty" data-group="faculty"></optgroup>
+        <optgroup label="Postdoc" data-group="postdoc"></optgroup>
+        <optgroup label="PhD student" data-group="phdstudent"></optgroup>
+        <optgroup label="Amanuens" data-group="amanuens"></optgroup>
       </select>
       <select class="add-role" data-type="course">
         <option selected disabled>Add course or project</option>
@@ -43,13 +45,23 @@
 <main>
   <h2>People (100% = 1700h, 20% = 340h)</h2>
   <details open>
-    <summary><h3>Seniors</h3></summary>
-    <div class="container" data-type="person" data-group="senior"></div>
+    <summary><h3>Faculty</h3></summary>
+    <div class="container" data-type="person" data-group="faculty"></div>
   </details>
 
   <details open>
-    <summary><h3>Juniors</h3></summary>
-    <div class="container" data-type="person" data-group="junior"></div>
+    <summary><h3>Postdocs</h3></summary>
+    <div class="container" data-type="person" data-group="postdoc"></div>
+  </details>
+
+  <details open>
+    <summary><h3>PhD students</h3></summary>
+    <div class="container" data-type="person" data-group="phdstudent"></div>
+  </details>
+
+  <details open>
+    <summary><h3>Amanuenses</h3></summary>
+    <div class="container" data-type="person" data-group="amanuens"></div>
   </details>
 
   <h2>Courses/projects</h2>
@@ -124,8 +136,10 @@
           </div>
         </div>
       </summary>
-      <div class="nosummary senior"><select class="add-task" name="senior"></select><div class="tasklist"></div></div>
-      <div class="nosummary junior"><select class="add-task" name="junior"></select><div class="tasklist"></div></div>
+      <div class="nosummary faculty"><select class="add-task" name="faculty"></select><div class="tasklist"></div></div>
+      <div class="nosummary postdoc"><select class="add-task" name="postdoc"></select><div class="tasklist"></div></div>
+      <div class="nosummary phdstudent"><select class="add-task" name="phdstudent"></select><div class="tasklist"></div></div>
+      <div class="nosummary amanuens"><select class="add-task" name="amanuens"></select><div class="tasklist"></div></div>
     </details>
   </form>
 </template>
@@ -155,8 +169,10 @@
         <label for="group">Category</label>
       </td><td>
         <select required name="group">
-          <option value="senior">Senior (e.g., those who can be examiners)</option>
-          <option value="junior">Junior (e.g., PhD student or postdoc)</option>
+          <option value="faculty">Faculty (e.g., those who can be examiners)</option>
+          <option value="postdoc">Postdocs (and temporary teachers)</option>
+          <option value="phdstudent">PhD students (and student TAs)</option>
+          <option value="amanuens">Amanuens (student TAs)</option>
         </select>
       </td></tr>
       <tr><td>

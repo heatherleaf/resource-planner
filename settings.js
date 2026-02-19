@@ -3,13 +3,17 @@ var SETTINGS = {
     fileName: "schedule.json",
     unknownPeriodName: "Unnamed period",
     newRoleValue: {
-        senior: 850,
-        junior: 340,
+        faculty: 850,
+        postdoc: 340,
+        phdstudent: 340,
+        amanuens: 80,
         course: 500,
     },
     newTaskValue: {
-        senior: 340,
-        junior: 80,
+        faculty: 340,
+        postdoc: 100,
+        phdstudent: 100,
+        amanuens: 80,
         course: 80,
     },
     valueToWidth: {
