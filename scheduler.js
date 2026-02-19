@@ -260,49 +260,67 @@ function populateRole(roleId) {
     if (!containerElem) containerElem = document.querySelector(`.container[data-type="${role.type}"]`);
     containerElem.append(roleElem);
 
-    if (currentPeriod) {
-        // Edit the role
-        roleElem.querySelector(".edit-role")?.addEventListener("click", editRole);
-
-        // Drag and drop
-        setupDraggableRole(roleElem, role.type);
-
-        // Changing the total target value of a role
-        const totalElem = roleElem.elements["total-value"];
-        totalElem.addEventListener("change", (event) => {
-            role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
-            dbUpdateRole(roleId, role);
-            updateRoles(roleElem);
-            totalElem.blur();
-        });
-
-        // The extra information "size"
-        const sizeElem = roleElem.elements["size"];
-        if (sizeElem) {
-            sizeElem.addEventListener("change", (event) => {
-                if (!role.size) role.size = {};
-                const size = parseInt(sizeElem.value);
-                role.size[currentPeriod] = size || 0;
-                sizeElem.value = size || "";
-                dbUpdateRole(roleId, role);
-                updateRoles(roleElem);
-                sizeElem.blur();
-            })
+    // The summary page: show only the role summaries, and nothing should be possible to edit
+    if (!currentPeriod) {
+        const detailsElem = roleElem.querySelector("details");
+        detailsElem.removeAttribute("open");
+        detailsElem.setAttribute("disabled", "");
+        for (const inputElem of detailsElem.querySelectorAll("input, select")) {
+            inputElem.setAttribute("disabled", "");
         }
-    } else {
-        roleElem.querySelector("details").removeAttribute("open");
+        return;
     }
 
-    // Alt-clicking a <details> will open/close all sibling <details> too
-    const summaryElem = roleElem.querySelector("summary");
-    summaryElem.addEventListener("click", (event) => {
+    // Edit the role
+    roleElem.querySelector(".edit-role")?.addEventListener("click", editRole);
+
+    // Drag and drop
+    setupDraggableRole(roleElem, role.type);
+
+    // Changing the total target value of a role
+    const totalElem = roleElem.elements["total-value"];
+    totalElem.addEventListener("change", (event) => {
+        role.target[currentPeriod] = totalElem.value = parseInt(totalElem.value) || 0;
+        dbUpdateRole(roleId, role);
+        updateRoles(roleElem);
+        totalElem.blur();
+    });
+
+    // The extra information "size"
+    const sizeElem = roleElem.elements["size"];
+    if (sizeElem) {
+        sizeElem.addEventListener("change", (event) => {
+            if (!role.size) role.size = {};
+            const size = parseInt(sizeElem.value);
+            role.size[currentPeriod] = size || 0;
+            sizeElem.value = size || "";
+            dbUpdateRole(roleId, role);
+            updateRoles(roleElem);
+            sizeElem.blur();
+        })
+    }
+
+    const detailsElem = roleElem.querySelector("details");
+    detailsElem.toggleAttribute("open", role.open);
+
+    detailsElem.addEventListener("toggle", (event) => {
+        const open = detailsElem.hasAttribute("open");
+        role.open = open;
+        dbUpdateRole(roleId, role);
+    });
+
+    // Alt-click to open/close all siblings
+    detailsElem.addEventListener("click", (event) => {
         if (event.altKey) {
-            const isOpen = roleElem.querySelector("details").open;
-            roleElem.closest(".container").querySelectorAll("form.role details").forEach((elem) => {
-                if (isOpen) elem.removeAttribute("open");
-                else elem.setAttribute("open", true)
-            });
             event.preventDefault();
+            const open = !detailsElem.hasAttribute("open");
+            for (const elem of roleElem.closest(".container").querySelectorAll("form.role")) {
+                elem.querySelector("details").toggleAttribute("open", open);
+                const id = elem.dataset.role;
+                const role = dbGetRole(id);
+                role.open = open;
+                dbUpdateRole(id, role);
+            }
         }
     });
 }
@@ -553,6 +571,7 @@ function addNewRole(event) {
 
 function editRole(event) {
     event.preventDefault();
+    event.stopPropagation();
     const roleId = event.target.closest("form.role").dataset.role;
     showRoleEditor(roleId, dbGetRole(roleId));
 }

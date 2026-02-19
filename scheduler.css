@@ -206,11 +206,10 @@ form.role input, .task, .add-task {
 }
 
 
-.summary-all-periods .nosummary {
-    display: none;
-}
-.summary-all-periods input, .summary-all-periods select.add-role {
-    pointer-events: none;
+.summary-all-periods input, .summary-all-periods select.add-role, .summary-all-periods .role details {
+    pointer-events: none;  /* prevents click events */
+    user-select: none;  /* prevents text selection */
+    color: initial;  /* prevents greyed-out text */
 }
 
 
