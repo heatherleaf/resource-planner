@@ -32,7 +32,8 @@
         <optgroup label="LP4" data-group="lp4"></optgroup>
         <optgroup label="LP1" data-group="lp1"></optgroup>
         <optgroup label="LP2" data-group="lp2"></optgroup>
-        <optgroup label="Other tasks" data-group="other"></optgroup>
+        <optgroup label="Generic GRU task" data-group="other"></optgroup>
+        <optgroup label="Non-GRU administrative task" data-group="admin"></optgroup>
       </select>
     </div>
     <div>
@@ -86,8 +87,13 @@
   </details>
 
   <details open>
-    <summary><h3>Other tasks</h3></summary>
+    <summary><h3>Generic GRU tasks</h3></summary>
     <div class="container" data-type="course" data-group="other"></div>
+  </details>
+
+  <details open>
+    <summary><h3>Non-GRU administrative tasks</h3></summary>
+    <div class="container" data-type="course" data-group="admin"></div>
   </details>
 </main>
 
@@ -114,6 +120,7 @@
       <div class="lp1"><select class="add-task" name="lp1"></select><div class="tasklist"></div></div>
       <div class="lp2"><select class="add-task" name="lp2"></select><div class="tasklist"></div></div>
       <div class="other"><select class="add-task" name="other"></select><div class="tasklist"></div></div>
+      <div class="admin"><select class="add-task" name="admin"></select><div class="tasklist"></div></div>
     </details>
   </form>
 </template>
@@ -222,7 +229,8 @@
           <option value="lp4">LP4 (Mar-May)</option>
           <option value="lp1">LP1 (Sep-Oct)</option>
           <option value="lp2">LP2 (Nov-Jan)</option>
-          <option value="other">Other course or project</option>
+          <option value="other">Generic GRU task</option>
+          <option value="admin">Non-GRU adminstrative task</option>
         </select>
       </td></tr>
       <tr><td>

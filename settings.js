@@ -15,6 +15,7 @@ var SETTINGS = {
         phdstudent: 100,
         amanuens: 80,
         course: 80,
+        other: 40,
     },
     valueToWidth: {
         base: 10,

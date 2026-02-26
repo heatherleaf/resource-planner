@@ -70,6 +70,9 @@ form.lp2 > details, details > .lp2 {
     background-color: color-mix(in srgb, yellowgreen 50%, white);
 }
 form.other > details, details > .other {
+    background-color: color-mix(in srgb, SaddleBrown 30%, white);
+}
+form.admin > details, details > .admin {
     background-color: color-mix(in srgb, slategray 40%, white);
 }
 form.faculty > details, details > .faculty {
