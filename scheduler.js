@@ -253,6 +253,9 @@ function populateRole(roleId) {
         (role.nickname || role.name) +
         (role.comments ? "\n\n" + role.comments : "")
     );
+    if (role.comments) {
+        roleElem.querySelector(".comments").textContent = role.comments;
+    }
 
     // Add the role to the container
     let containerElem;
@@ -273,6 +276,9 @@ function populateRole(roleId) {
 
     // Edit the role
     roleElem.querySelector(".edit-role")?.addEventListener("click", editRole);
+
+    // Show a summary
+    roleElem.querySelector(".info-role")?.addEventListener("click", showSummary)
 
     // Drag and drop
     setupDraggableRole(roleElem, role.type);
@@ -412,7 +418,7 @@ function populateTask(taskId, dontUpdateRoles = false) {
                     if (newValue !== task.value) {
                         task.value = newValue;
                         dbUpdateTask(taskId, task);
-                        updateTask(taskId);
+                        updateTask(taskId, true);
                     }
                 }
                 updateRoles(...Object.values(roleElems));
@@ -494,7 +500,7 @@ function showTaskEditor(taskElem) {
 }
 
 
-function updateTask(taskId) {
+function updateTask(taskId, dontReorder) {
     const task = dbGetTask(taskId);
     if (!task) return;
     const taskElems = document.querySelectorAll(`.task[data-task-id="${taskId}"]`);
@@ -504,14 +510,24 @@ function updateTask(taskId) {
             (task.roles[type] !== roleId) ? dbGetRole(task.roles[type]) : []
         );
         if (taskRoles.length === 0) console.warn(`Task ${taskId} in ${roleId}: empty description`, task);
+        const taskInfo = taskRoles.map((r) => r.nickname || r.name).join(" + ");
         taskElem.querySelector(".task-value").textContent = task.value;
-        taskElem.querySelector(".task-info").textContent = taskRoles.map((r) => r.nickname || r.name).join(" + ");
+        taskElem.querySelector(".task-info").textContent = taskInfo;
         taskElem.title = (
             task.value + ": " + taskRoles.map((r) => r.name).join(" + ") +
             (task.comments ? "\n\n" + task.comments : "")
         );
         const width = valueToWidth(task.value);
         taskElem.style.width = width + "px";
+        if (!dontReorder) {
+            const taskParent = taskElem.parentNode;
+            for (const otherTask of taskParent.querySelectorAll(".task")) {
+                if (taskInfo.localeCompare(otherTask.querySelector(".task-info").textContent) < 0) {
+                    taskParent.insertBefore(taskElem, otherTask);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -662,17 +678,73 @@ function updateRoles(...roleElems) {
         }
         const calcElem = roleElem.elements["calculated"];
         if (calcElem){
-            const calcFun = SETTINGS.calculation?.[role.type];
-            if (calcElem && calcFun) {
-                try {
-                    calcElem.value = calcFun(role, period) || "";
-                } catch {
-                    calcElem.value = "";
-                }
-            }
+            calcElem.value = calculateValue(role, period);
         }
     }
 }
+
+
+function calculateValue(role, period) {
+    const calcFun = SETTINGS.calculation?.[role.type];
+    const postValue = SETTINGS.valueDescriptor?.[role.type] || "";
+    let calculated;
+    try { calculated = calcFun(role, period);
+    } catch {}
+    return calculated ? ` → ${calculated}${postValue}` : "";
+}
+
+
+function showSummary(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const roleId = event.target.closest("form.role").dataset.role;
+    const data = dbGetAllData();
+    const role = data.roles[roleId];
+    const roleTasks = {};
+    let totalValue = 0;
+    for (const taskId in data.tasks) {
+        const task = data.tasks[taskId];
+        if (task.roles[role.type] !== roleId) continue;
+        let taskRole;
+        for (const type in task.roles) {
+            if (type !== role.type) {
+                taskRole = data.roles[task.roles[type]];
+                break;
+            }
+        }
+        if (!taskRole) {
+            console.error("MISSING ROLE", roleId, taskId, task);
+            continue;
+        }
+        const key = `${task.period}: ${taskRole.group}`;
+        if (!roleTasks[key]) roleTasks[key] = [];
+        let title = taskRole.name;
+        if (task.comments) title += "  [" + task.comments.replace("\n", " // ") + "]";
+        roleTasks[key].push({title: title, value: task.value});
+        totalValue += task.value;
+    }
+
+    const summaryModal = document.querySelector("#role-info-dialog");
+    const content = summaryModal.querySelector(".role-info-content");
+    content.innerHTML = "";
+    const postSize = SETTINGS.sizeDescriptor?.[role.type] || "";
+    const postValue = SETTINGS.valueDescriptor?.[role.type] || "";
+    const size = sum(Object.values(role.size));
+    content.appendChild(newElem("h2", `${role.name} (${size}${postSize}${calculateValue(role)})`));
+    if (role.comments?.trim()) content.appendChild(newElem("p")).innerHTML = role.comments.trim().replace("\n", "<br>");
+    const totalTarget = sum(Object.values(role.target));
+    content.appendChild(newElem("ul")).appendChild(newElem("li", `${totalValue}${postValue} (out of ${totalTarget}${postValue})`));
+    for (const key of Object.keys(roleTasks).toSorted()) {
+        const valueSum = sum(roleTasks[key].map((task) => task.value));
+        content.appendChild(newElem("h3", `${key} (${valueSum}${postValue})`));
+        const list = content.appendChild(newElem("ul"));
+        for (const task of roleTasks[key]) {
+            list.appendChild(newElem("li", `${task.value}${postValue}: ${task.title}`));
+        }
+    }
+    summaryModal.showModal();
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

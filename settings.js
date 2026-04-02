@@ -24,16 +24,22 @@ var SETTINGS = {
         minValue: 10,
         snapDelta: 10,
     },
+    sizeDescriptor: {
+        person: "%",
+        course: " students",
+    },
+    valueDescriptor: {
+        person: " h",
+        course: " h",
+    },
     calculation: {
         person: (role, period) => {
             const percent = period ? role.size[period] : sum(Object.values(role.size));
-            const hours = Math.round(1700 * percent / 100);
-            if (percent) return ` → ${hours} h`;
+            if (percent) return Math.round(1700 * percent / 100);
         },
         course: (role, period) => {
             const students = period ? role.size[period] : sum(Object.values(role.size));
-            const hours = Math.round(160 + 6 * students);
-            if (students) return ` → ${hours} h`;
+            if (students) return Math.round(160 + 6 * students);
         },
     },
 };

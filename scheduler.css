@@ -4,6 +4,10 @@ body {
     font-size: 14px;
 }
 
+h1 { font-size: 20px }
+h2 { font-size: 16px }
+h3, h4, h5, h6 { font-size: 14px }
+
 div, span {
     margin: 0;
     padding: 0;
@@ -35,14 +39,17 @@ form.role {
     width: 200px;
 }
 
-.role details .edit-role {
+.role details .right-header {
     display: none;
     float: right;
-    font-weight: bold;
 }
 
-.role details:open .edit-role {
+.role details:open .right-header {
     display: block;
+}
+
+.edit-role {
+    font-size: 150%;
 }
 
 summary, select, input {
@@ -94,6 +101,10 @@ form.amanuens > details, details > .amanuens {
 
 .role details > *:last-child {
     border-radius: 0 0 16px 16px;
+}
+
+.role .comments {
+    white-space: pre-wrap;
 }
 
 .add-task {
@@ -206,6 +217,19 @@ form.role input, .task, .add-task {
 
 .dragged {
     opacity: 0.2;
+}
+
+
+.role-info-content > * {
+    margin: 8px 0;
+}
+
+.role-info-content > ul {
+    padding-left: 24px;
+}
+
+.role-info-close {
+    float: right;
 }
 
 
